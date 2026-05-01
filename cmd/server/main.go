@@ -39,8 +39,8 @@ func main() {
 
 	err = pubsub.PublishJSON(
 		publishCh,
-		routing.ExchangePerilTopic,
-		routing.GameLogSlug,
+		routing.ExchangePerilDirect,
+		routing.PauseKey,
 		routing.PlayingState{
 			IsPaused: true,
 		},
@@ -62,8 +62,8 @@ func main() {
 			fmt.Println("Publishing paused game state")
 			err = pubsub.PublishJSON(
 				publishCh,
-				routing.ExchangePerilTopic,
-				routing.GameLogSlug,
+				routing.ExchangePerilDirect,
+				routing.PauseKey,
 				routing.PlayingState{
 					IsPaused: true,
 				},
@@ -76,8 +76,8 @@ func main() {
 			fmt.Println("Publishing resumes game state")
 			err = pubsub.PublishJSON(
 				publishCh,
-				routing.ExchangePerilTopic,
-				routing.GameLogSlug,
+				routing.ExchangePerilDirect,
+				routing.PauseKey,
 				routing.PlayingState{
 					IsPaused: false,
 				},
