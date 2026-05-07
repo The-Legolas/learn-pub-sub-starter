@@ -26,16 +26,17 @@ func main() {
 		log.Fatalf("could not create channel: %v", err)
 	}
 
-	_, _, err = pubsub.DeclareAndBind(
+	_, queue, err := pubsub.DeclareAndBind(
 		conn,
 		routing.ExchangePerilTopic,
 		routing.GameLogSlug,
-		routing.GameLogSlug, // binding key
+		routing.GameLogSlug+".*",
 		pubsub.SimpleQueueDurable,
 	)
 	if err != nil {
 		log.Fatalf("could not declare and bind queue: %v", err)
 	}
+	fmt.Printf("Queue %v declared and bound!\n", queue.Name)
 
 	err = pubsub.PublishJSON(
 		publishCh,
