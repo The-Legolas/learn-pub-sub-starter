@@ -26,17 +26,18 @@ func main() {
 		log.Fatalf("could not create channel: %v", err)
 	}
 
-	_, queue, err := pubsub.DeclareAndBind(
+	err = pubsub.Subscribe(
 		conn,
 		routing.ExchangePerilTopic,
 		routing.GameLogSlug,
 		routing.GameLogSlug+".*",
 		pubsub.SimpleQueueDurable,
+		handlerWriteLog(),
+		pubsub.GobSub[routing.GameLog](),
 	)
 	if err != nil {
-		log.Fatalf("could not declare and bind queue: %v", err)
+		log.Fatalf("could not subscribe to game log messages: %v", err)
 	}
-	fmt.Printf("Queue %v declared and bound!\n", queue.Name)
 
 	err = pubsub.PublishJSON(
 		publishCh,
@@ -93,5 +94,4 @@ func main() {
 			fmt.Println("unknown command")
 		}
 	}
-
 }

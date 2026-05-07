@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
@@ -49,24 +50,62 @@ func handlerMove(gs *gamelogic.GameState, publishCh *amqp091.Channel) func(move 
 	}
 }
 
-func handlerWar(gs *gamelogic.GameState) func(rw gamelogic.RecognitionOfWar) pubsub.Acktype {
+func handlerWar(gs *gamelogic.GameState, publishCh *amqp091.Channel) func(rw gamelogic.RecognitionOfWar) pubsub.Acktype {
 	return func(rw gamelogic.RecognitionOfWar) pubsub.Acktype {
 		defer fmt.Print("> ")
-		warOutcome, _, _ := gs.HandleWar(rw)
+		warOutcome, winner, loser := gs.HandleWar(rw)
 		switch warOutcome {
 		case gamelogic.WarOutcomeNotInvolved:
 			return pubsub.NackRequeue
 		case gamelogic.WarOutcomeNoUnits:
 			return pubsub.NackDiscard
 		case gamelogic.WarOutcomeOpponentWon:
+			msg := fmt.Sprintf("%s won a war against %s", winner, loser)
+			err := handlerGameLog(msg, rw.Attacker.Username, publishCh)
+			if err != nil {
+				fmt.Printf("error: %v\n", err)
+				return pubsub.NackRequeue
+			}
 			return pubsub.Ack
 		case gamelogic.WarOutcomeYouWon:
+			msg := fmt.Sprintf("%s won a war against %s", winner, loser)
+			err := handlerGameLog(msg, rw.Attacker.Username, publishCh)
+			if err != nil {
+				fmt.Printf("error: %v\n", err)
+				return pubsub.NackRequeue
+			}
 			return pubsub.Ack
 		case gamelogic.WarOutcomeDraw:
+			msg := fmt.Sprintf("A war between %s and %s resulted in a draw", winner, loser)
+			err := handlerGameLog(msg, rw.Attacker.Username, publishCh)
+			if err != nil {
+				fmt.Printf("error: %v\n", err)
+				return pubsub.NackRequeue
+			}
 			return pubsub.Ack
 		default:
 			fmt.Println("error: unknown war outcome")
 			return pubsub.NackDiscard
 		}
 	}
+}
+
+func handlerGameLog(msg, username string, publishCh *amqp091.Channel) error {
+	gl := routing.GameLog{
+		CurrentTime: time.Now().UTC(),
+		Message:     msg,
+		Username:    username,
+	}
+
+	err := pubsub.PublishGob(
+		publishCh,
+		routing.ExchangePerilTopic,
+		routing.GameLogSlug+"."+username,
+		gl,
+	)
+	if err != nil {
+		return fmt.Errorf("error: %v\n", err)
+
+	}
+	return nil
 }
