@@ -68,10 +68,10 @@ func SubscribeJSON[T any](
 				msg.Ack(false)
 				fmt.Println("Ack")
 			case NackDiscard:
-				msg.Nack(false, true)
+				msg.Nack(false, false)
 				fmt.Println("NackDiscard")
 			case NackRequeue:
-				msg.Nack(false, false)
+				msg.Nack(false, true)
 				fmt.Println("NackRequeue")
 			}
 
@@ -103,7 +103,9 @@ func DeclareAndBind(
 		isautoDelete, // delete when unuseds
 		isexclusive,  // exclusive
 		false,        //  no-wait
-		nil,          // args
+		amqp.Table{
+			"x-dead-letter-exchange": "peril_dlx",
+		}, // args
 	)
 	if err != nil {
 		return nil, amqp.Queue{}, fmt.Errorf("could not declare new queue: %v", err)
