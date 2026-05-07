@@ -62,6 +62,50 @@ func DeclareAndBind(
 	return ch, newQueue, nil
 }
 
+func SubscribeJSON[T any](
+	conn *amqp.Connection,
+	exchange, queueName, key string,
+	simpleQueueType SimpleQueueType,
+	handler func(T) Acktype,
+) error {
+	return subscribe(
+		conn,
+		exchange,
+		queueName,
+		key,
+		simpleQueueType,
+		handler,
+		func(data []byte) (T, error) {
+			var target T
+			err := json.Unmarshal(data, &target)
+			return target, err
+		},
+	)
+}
+
+func SubscribeGob[T any](
+	conn *amqp.Connection,
+	exchange, queueName, key string,
+	simpleQueueType SimpleQueueType,
+	handler func(T) Acktype,
+) error {
+	return subscribe(
+		conn,
+		exchange,
+		queueName,
+		key,
+		simpleQueueType,
+		handler,
+		func(data []byte) (T, error) {
+			buf := bytes.NewBuffer(data)
+			dec := gob.NewDecoder(buf)
+			var target T
+			err := dec.Decode(&target)
+			return target, err
+		},
+	)
+}
+
 func subscribe[T any](
 	conn *amqp.Connection,
 	exchange,
@@ -110,48 +154,4 @@ func subscribe[T any](
 	}()
 
 	return nil
-}
-
-func SubscribeJSON[T any](
-	conn *amqp.Connection,
-	exchange, queueName, key string,
-	simpleQueueType SimpleQueueType,
-	handler func(T) Acktype,
-) error {
-	return subscribe(
-		conn,
-		exchange,
-		queueName,
-		key,
-		simpleQueueType,
-		handler,
-		func(data []byte) (T, error) {
-			var target T
-			err := json.Unmarshal(data, &target)
-			return target, err
-		},
-	)
-}
-
-func SubscribeGob[T any](
-	conn *amqp.Connection,
-	exchange, queueName, key string,
-	simpleQueueType SimpleQueueType,
-	handler func(T) Acktype,
-) error {
-	return subscribe(
-		conn,
-		exchange,
-		queueName,
-		key,
-		simpleQueueType,
-		handler,
-		func(data []byte) (T, error) {
-			buf := bytes.NewBuffer(data)
-			dec := gob.NewDecoder(buf)
-			var target T
-			err := dec.Decode(&target)
-			return target, err
-		},
-	)
 }
