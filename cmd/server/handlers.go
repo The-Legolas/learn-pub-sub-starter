@@ -8,14 +8,14 @@ import (
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 )
 
-func handlerWriteLog() func(gl routing.GameLog) pubsub.Acktype {
-	return func(gl routing.GameLog) pubsub.Acktype {
+func handlerWriteLog() func(gamelog routing.GameLog) pubsub.Acktype {
+	return func(gamelog routing.GameLog) pubsub.Acktype {
 		defer fmt.Print("> ")
 
-		err := gamelogic.WriteLog(gl)
+		err := gamelogic.WriteLog(gamelog)
 		if err != nil {
-			fmt.Printf("error: %v\n", err)
-			return pubsub.NackDiscard
+			fmt.Printf("error writing log: %v\n", err)
+			return pubsub.NackRequeue
 		}
 
 		return pubsub.Ack

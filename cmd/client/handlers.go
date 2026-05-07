@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
@@ -61,7 +60,7 @@ func handlerWar(gs *gamelogic.GameState, publishCh *amqp091.Channel) func(rw gam
 			return pubsub.NackDiscard
 		case gamelogic.WarOutcomeOpponentWon:
 			msg := fmt.Sprintf("%s won a war against %s", winner, loser)
-			err := handlerGameLog(msg, rw.Attacker.Username, publishCh)
+			err := publishGameLog(publishCh, msg, rw.Attacker.Username)
 			if err != nil {
 				fmt.Printf("error: %v\n", err)
 				return pubsub.NackRequeue
@@ -69,7 +68,7 @@ func handlerWar(gs *gamelogic.GameState, publishCh *amqp091.Channel) func(rw gam
 			return pubsub.Ack
 		case gamelogic.WarOutcomeYouWon:
 			msg := fmt.Sprintf("%s won a war against %s", winner, loser)
-			err := handlerGameLog(msg, rw.Attacker.Username, publishCh)
+			err := publishGameLog(publishCh, msg, rw.Attacker.Username)
 			if err != nil {
 				fmt.Printf("error: %v\n", err)
 				return pubsub.NackRequeue
@@ -77,7 +76,7 @@ func handlerWar(gs *gamelogic.GameState, publishCh *amqp091.Channel) func(rw gam
 			return pubsub.Ack
 		case gamelogic.WarOutcomeDraw:
 			msg := fmt.Sprintf("A war between %s and %s resulted in a draw", winner, loser)
-			err := handlerGameLog(msg, rw.Attacker.Username, publishCh)
+			err := publishGameLog(publishCh, msg, rw.Attacker.Username)
 			if err != nil {
 				fmt.Printf("error: %v\n", err)
 				return pubsub.NackRequeue
@@ -88,24 +87,4 @@ func handlerWar(gs *gamelogic.GameState, publishCh *amqp091.Channel) func(rw gam
 			return pubsub.NackDiscard
 		}
 	}
-}
-
-func handlerGameLog(msg, username string, publishCh *amqp091.Channel) error {
-	gl := routing.GameLog{
-		CurrentTime: time.Now().UTC(),
-		Message:     msg,
-		Username:    username,
-	}
-
-	err := pubsub.PublishGob(
-		publishCh,
-		routing.ExchangePerilTopic,
-		routing.GameLogSlug+"."+username,
-		gl,
-	)
-	if err != nil {
-		return fmt.Errorf("error: %v\n", err)
-
-	}
-	return nil
 }

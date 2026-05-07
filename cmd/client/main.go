@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"strconv"
+	"time"
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
@@ -106,7 +108,33 @@ func main() {
 		case "help":
 			gamelogic.PrintClientHelp()
 		case "spam":
-			fmt.Println("Spamming not allowed yet!")
+			if len(words) != 2 {
+				fmt.Println("Usage: spam [number]")
+				continue
+			}
+			number, err := strconv.Atoi(words[1])
+			if err != nil {
+				fmt.Printf("error: %s is not a valid number\n", words[1])
+			}
+			for range number {
+				malLog := gamelogic.GetMaliciousLog()
+				logEntry := routing.GameLog{
+					Username:    gs.GetUsername(),
+					Message:     malLog,
+					CurrentTime: time.Now().UTC(),
+				}
+
+				err = pubsub.PublishGob(
+					publishCh,
+					routing.ExchangePerilTopic,
+					routing.GameLogSlug+"."+gs.GetUsername(),
+					logEntry,
+				)
+				if err != nil {
+					log.Fatalf("could not subscribe to pause messages: %v", err)
+				}
+			}
+			fmt.Printf("Published %v malicious logs\n", number)
 		case "quit":
 			gamelogic.PrintQuit()
 			return
@@ -114,4 +142,17 @@ func main() {
 			fmt.Println("unknown command")
 		}
 	}
+}
+
+func publishGameLog(publishCh *amqp.Channel, username, msg string) error {
+	return pubsub.PublishGob(
+		publishCh,
+		routing.ExchangePerilTopic,
+		routing.GameLogSlug+"."+username,
+		routing.GameLog{
+			Username:    username,
+			CurrentTime: time.Now(),
+			Message:     msg,
+		},
+	)
 }

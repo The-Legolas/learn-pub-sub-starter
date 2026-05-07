@@ -62,7 +62,7 @@ func DeclareAndBind(
 	return ch, newQueue, nil
 }
 
-func Subscribe[T any](
+func subscribe[T any](
 	conn *amqp.Connection,
 	exchange,
 	queueName,
@@ -73,7 +73,7 @@ func Subscribe[T any](
 ) error {
 	ch, queue, err := DeclareAndBind(conn, exchange, queueName, key, simpleQueueType)
 	if err != nil {
-		return fmt.Errorf("could not declare and bind queue: %v", err)
+		return fmt.Errorf("could not declare and bind queue: %v\n", err)
 	}
 
 	deliveryChannels, err := ch.Consume(
@@ -86,7 +86,7 @@ func Subscribe[T any](
 		nil,        // args
 	)
 	if err != nil {
-		return fmt.Errorf("error consuming channel: %v", err)
+		return fmt.Errorf("error consuming channel: %v\n", err)
 	}
 
 	go func() {
@@ -94,7 +94,7 @@ func Subscribe[T any](
 		for msg := range deliveryChannels {
 			target, err := unmarshaller(msg.Body)
 			if err != nil {
-				fmt.Printf("Error unmarshalling data: %v", err)
+				fmt.Printf("Error unmarshalling data: %v\n", err)
 				continue
 			}
 			switch handler(target) {
@@ -112,23 +112,46 @@ func Subscribe[T any](
 	return nil
 }
 
-func JSONSub[T any]() func(data []byte) (T, error) {
-	unmarshaller := func(data []byte) (T, error) {
-		var target T
-		err := json.Unmarshal(data, &target)
-		return target, err
-	}
-
-	return unmarshaller
+func SubscribeJSON[T any](
+	conn *amqp.Connection,
+	exchange, queueName, key string,
+	simpleQueueType SimpleQueueType,
+	handler func(T) Acktype,
+) error {
+	return subscribe(
+		conn,
+		exchange,
+		queueName,
+		key,
+		simpleQueueType,
+		handler,
+		func(data []byte) (T, error) {
+			var target T
+			err := json.Unmarshal(data, &target)
+			return target, err
+		},
+	)
 }
 
-func GobSub[T any]() func(data []byte) (T, error) {
-	unmarshaller := func(data []byte) (T, error) {
-		buf := bytes.NewBuffer(data)
-		dec := gob.NewDecoder(buf)
-		var target T
-		err := dec.Decode(&target)
-		return target, err
-	}
-	return unmarshaller
+func SubscribeGob[T any](
+	conn *amqp.Connection,
+	exchange, queueName, key string,
+	simpleQueueType SimpleQueueType,
+	handler func(T) Acktype,
+) error {
+	return subscribe(
+		conn,
+		exchange,
+		queueName,
+		key,
+		simpleQueueType,
+		handler,
+		func(data []byte) (T, error) {
+			buf := bytes.NewBuffer(data)
+			dec := gob.NewDecoder(buf)
+			var target T
+			err := dec.Decode(&target)
+			return target, err
+		},
+	)
 }

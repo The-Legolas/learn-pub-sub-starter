@@ -26,14 +26,13 @@ func main() {
 		log.Fatalf("could not create channel: %v", err)
 	}
 
-	err = pubsub.Subscribe(
+	err = pubsub.SubscribeGob(
 		conn,
 		routing.ExchangePerilTopic,
 		routing.GameLogSlug,
 		routing.GameLogSlug+".*",
 		pubsub.SimpleQueueDurable,
 		handlerWriteLog(),
-		pubsub.GobSub[routing.GameLog](),
 	)
 	if err != nil {
 		log.Fatalf("could not subscribe to game log messages: %v", err)
