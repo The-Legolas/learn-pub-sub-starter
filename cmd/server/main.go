@@ -19,7 +19,7 @@ func main() {
 		log.Fatalf("could not connect to RabbitMQ: %v", err)
 	}
 	defer conn.Close()
-	fmt.Println("Conneceted to Peril server...")
+	fmt.Println("Peril game server connected to RabbitMQ!")
 
 	publishCh, err := conn.Channel()
 	if err != nil {
@@ -32,7 +32,7 @@ func main() {
 		routing.GameLogSlug,
 		routing.GameLogSlug+".*",
 		pubsub.SimpleQueueDurable,
-		handlerWriteLog(),
+		handlerLogs(),
 	)
 	if err != nil {
 		log.Fatalf("could not subscribe to game log messages: %v", err)
@@ -50,8 +50,9 @@ func main() {
 		log.Fatalf("could not publish time: %v", err)
 	}
 
+	gamelogic.PrintServerHelp()
+
 	for {
-		gamelogic.PrintServerHelp()
 		inputwords := gamelogic.GetInput()
 
 		if len(inputwords) == 0 {

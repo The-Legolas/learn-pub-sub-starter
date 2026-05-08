@@ -8,7 +8,7 @@ import (
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 )
 
-func handlerWriteLog() func(gamelog routing.GameLog) pubsub.Acktype {
+func handlerLogs() func(gamelog routing.GameLog) pubsub.Acktype {
 	return func(gamelog routing.GameLog) pubsub.Acktype {
 		defer fmt.Print("> ")
 

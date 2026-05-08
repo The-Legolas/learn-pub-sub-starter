@@ -35,38 +35,35 @@ func main() {
 
 	gs := gamelogic.NewGameState(username)
 
-	err = pubsub.Subscribe(
+	err = pubsub.SubscribeJSON(
 		conn,
 		routing.ExchangePerilTopic,
 		routing.ArmyMovesPrefix+"."+gs.GetUsername(),
 		routing.ArmyMovesPrefix+"."+"*",
 		pubsub.SimpleQueueTransient,
 		handlerMove(gs, publishCh),
-		pubsub.JSONSub[gamelogic.ArmyMove](),
 	)
 	if err != nil {
 		log.Fatalf("could not subscribe to army moves messages: %v", err)
 	}
-	err = pubsub.Subscribe(
+	err = pubsub.SubscribeJSON(
 		conn,
 		routing.ExchangePerilTopic,
 		routing.WarRecognitionsPrefix,
 		routing.WarRecognitionsPrefix+"."+"*",
 		pubsub.SimpleQueueDurable,
 		handlerWar(gs, publishCh),
-		pubsub.JSONSub[gamelogic.RecognitionOfWar](),
 	)
 	if err != nil {
 		log.Fatalf("could not subscribe to war declarations messages: %v", err)
 	}
-	err = pubsub.Subscribe(
+	err = pubsub.SubscribeJSON(
 		conn,
 		routing.ExchangePerilDirect,
 		routing.PauseKey+"."+gs.GetUsername(),
 		routing.PauseKey,
 		pubsub.SimpleQueueTransient,
 		handlerPause(gs),
-		pubsub.JSONSub[routing.PlayingState](),
 	)
 	if err != nil {
 		log.Fatalf("could not subscribe to pause messages: %v", err)
@@ -109,7 +106,7 @@ func main() {
 			gamelogic.PrintClientHelp()
 		case "spam":
 			if len(words) != 2 {
-				fmt.Println("Usage: spam [number]")
+				fmt.Println("Usage: spam <n>")
 				continue
 			}
 			number, err := strconv.Atoi(words[1])
@@ -118,20 +115,9 @@ func main() {
 			}
 			for range number {
 				malLog := gamelogic.GetMaliciousLog()
-				logEntry := routing.GameLog{
-					Username:    gs.GetUsername(),
-					Message:     malLog,
-					CurrentTime: time.Now().UTC(),
-				}
-
-				err = pubsub.PublishGob(
-					publishCh,
-					routing.ExchangePerilTopic,
-					routing.GameLogSlug+"."+gs.GetUsername(),
-					logEntry,
-				)
+				err = publishGameLog(publishCh, username, malLog)
 				if err != nil {
-					log.Fatalf("could not subscribe to pause messages: %v", err)
+					fmt.Printf("error publishing malicious log: %s\n", err)
 				}
 			}
 			fmt.Printf("Published %v malicious logs\n", number)
